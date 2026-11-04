@@ -89,6 +89,58 @@ export function getNavigationUrl(coordinates, address) {
 }
 
 /**
+ * Calculates geographic distance in kilometers between two lat/lng points using Haversine formula.
+ */
+export function calculateDistanceKm(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth radius in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * Optimizes the stop sequence to find the "Easiest & Shortest Route"
+ * Starts from Central Hub, progressively picks the nearest next customer (Nearest-Neighbor algorithm).
+ */
+export function optimizeEasiestRoute(hub, stops = []) {
+  if (stops.length <= 1) return [...stops];
+
+  const remaining = [...stops];
+  const sorted = [];
+  let currentPos = { lat: hub.lat, lng: hub.lng };
+
+  while (remaining.length > 0) {
+    let nearestIdx = 0;
+    let shortestDist = Infinity;
+
+    for (let i = 0; i < remaining.length; i++) {
+      const s = remaining[i];
+      const sLat = s.coordinates?.lat || hub.lat;
+      const sLng = s.coordinates?.lng || hub.lng;
+      const dist = calculateDistanceKm(currentPos.lat, currentPos.lng, sLat, sLng);
+      if (dist < shortestDist) {
+        shortestDist = dist;
+        nearestIdx = i;
+      }
+    }
+
+    const [nearestStop] = remaining.splice(nearestIdx, 1);
+    sorted.push(nearestStop);
+    currentPos = {
+      lat: nearestStop.coordinates?.lat || currentPos.lat,
+      lng: nearestStop.coordinates?.lng || currentPos.lng
+    };
+  }
+
+  return sorted;
+}
+
+/**
  * Exception reasons for "Customer Not Available"
  */
 export const NOT_AVAILABLE_REASONS = [
