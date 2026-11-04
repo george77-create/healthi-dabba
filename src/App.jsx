@@ -13,6 +13,7 @@ import {
   initialRoutes,
   initialDailyMenu,
   initialDabbas, 
+  initialDamagedDabbas,
   initialKitchenInventory, 
   initialKitchenTasks, 
   dispatchChecklist 
@@ -65,6 +66,7 @@ export default function App() {
   const [routes, setRoutes] = useState(initialRoutes);
   const [dailyMenu, setDailyMenu] = useState(initialDailyMenu);
   const [dabbas, setDabbas] = useState(initialDabbas);
+  const [damagedLedger, setDamagedLedger] = useState(initialDamagedDabbas);
   const [inventory, setInventory] = useState(initialKitchenInventory);
   const [tasks, setTasks] = useState(initialKitchenTasks);
   const [checklist, setChecklist] = useState(dispatchChecklist);
@@ -622,6 +624,112 @@ export default function App() {
     setIsAuthenticated(false);
   };
 
+  // Dabba Fleet OS Handlers
+  const handleAddDabba = (dabbaData) => {
+    setDabbas(prev => [dabbaData, ...prev]);
+  };
+
+  const handleBulkAddDabbas = (count, prefix = 'DB-') => {
+    setDabbas(prev => {
+      const existingCodes = new Set([
+        ...prev.map(d => d.code),
+        ...damagedLedger.map(d => d.retiredCode)
+      ]);
+
+      let maxNum = 100;
+      existingCodes.forEach(c => {
+        const num = parseInt(c.replace(/\D/g, '') || '0', 10);
+        if (num > maxNum) maxNum = num;
+      });
+
+      const newItems = [];
+      let curr = maxNum + 1;
+      while (newItems.length < count) {
+        const candidate = `${prefix}${curr}`;
+        if (!existingCodes.has(candidate)) {
+          newItems.push({
+            code: candidate,
+            status: 'in_godown',
+            holder: 'Godown Sanitized Rack',
+            lastUpdate: new Date().toISOString().slice(0, 16).replace('T', ' ')
+          });
+          existingCodes.add(candidate);
+        }
+        curr++;
+      }
+      return [...newItems, ...prev];
+    });
+  };
+
+  const handleDecommissionDabba = ({ code, reasonCategory, notes, reportedBy, autoReplace }) => {
+    const target = dabbas.find(d => d.code === code);
+    if (!target) return;
+
+    let replacementCode = null;
+    if (autoReplace) {
+      const allExisting = new Set([
+        ...dabbas.map(d => d.code),
+        ...damagedLedger.map(d => d.retiredCode)
+      ]);
+      let maxNum = 100;
+      allExisting.forEach(c => {
+        const num = parseInt(c.replace(/\D/g, '') || '0', 10);
+        if (num > maxNum) maxNum = num;
+      });
+      let next = maxNum + 1;
+      while (allExisting.has(`DB-${next}`)) {
+        next++;
+      }
+      replacementCode = `DB-${next}`;
+    }
+
+    // 1. Remove damaged dabba from active circulation & insert replacement if requested
+    setDabbas(prev => {
+      const filtered = prev.filter(d => d.code !== code);
+      if (replacementCode) {
+        const newReplacementBox = {
+          code: replacementCode,
+          status: target.status,
+          holder: target.holder,
+          lastUpdate: new Date().toISOString().slice(0, 16).replace('T', ' ')
+        };
+        return [newReplacementBox, ...filtered];
+      }
+      return filtered;
+    });
+
+    // 2. If it was held by a customer, update customer's dabbasHeld
+    setCustomers(prev => prev.map(c => {
+      if (c.dabbasHeld && c.dabbasHeld.includes(code)) {
+        const updatedHeld = c.dabbasHeld.filter(x => x !== code);
+        if (replacementCode) updatedHeld.push(replacementCode);
+        return { ...c, dabbasHeld: updatedHeld };
+      }
+      return c;
+    }));
+
+    // 3. Add to damaged/blacklisted ledger permanently
+    const logEntry = {
+      id: `SCRAP-${Date.now()}`,
+      retiredCode: code,
+      decommissionDate: new Date().toISOString().slice(0, 10),
+      decommissionTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      reasonCategory,
+      notes,
+      reportedBy,
+      previousHolder: target.holder,
+      previousStatus: target.status,
+      replacementCode: replacementCode || 'None (Fleet Downsized)',
+      qrStatus: 'Permanently Blacklisted'
+    };
+
+    setDamagedLedger(prev => [logEntry, ...prev]);
+  };
+
+  const handleDeleteDabba = (code) => {
+    setDabbas(prev => prev.filter(d => d.code !== code));
+  };
+
   if (!isAuthenticated) {
     return <LoginPage onLogin={handleLogin} />;
   }
@@ -689,6 +797,7 @@ export default function App() {
               kitchenStaff={kitchenStaff}
               routes={routes}
               dabbas={dabbas}
+              damagedLedger={damagedLedger}
               dailyMenu={dailyMenu}
               onSelectCustomer={(customerId) => {
                 setActiveCustomerId(customerId);
@@ -715,6 +824,10 @@ export default function App() {
               onAddMenuItem={handleAddMenuItem}
               onDeleteMenuItem={handleDeleteMenuItem}
               onBroadcastUrgentInstruction={handleBroadcastUrgent}
+              onAddDabba={handleAddDabba}
+              onBulkAddDabbas={handleBulkAddDabbas}
+              onDecommissionDabba={handleDecommissionDabba}
+              onDeleteDabba={handleDeleteDabba}
             />
           )}
         </div>

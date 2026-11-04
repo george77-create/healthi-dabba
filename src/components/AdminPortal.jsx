@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import DabbaFleetManager from './DabbaFleetManager';
 import { 
   ShieldCheck, 
   Users, 
@@ -79,6 +80,7 @@ export default function AdminPortal({
   kitchenStaff,
   routes,
   dabbas, 
+  damagedLedger = [],
   dailyMenu,
   onAddCustomer,
   onDeleteCustomer,
@@ -101,7 +103,11 @@ export default function AdminPortal({
   onScheduleLeave,
   onCancelSubscription,
   onReactivateSubscription,
-  onBroadcastUrgentInstruction
+  onBroadcastUrgentInstruction,
+  onAddDabba,
+  onBulkAddDabbas,
+  onDecommissionDabba,
+  onDeleteDabba
 }) {
   const [activeTab, setActiveTab] = useState('customers'); // 'customers' | 'staff' | 'routes' | 'menu' | 'dabbas' | 'finance' | 'broadcast'
   const [customerFilter, setCustomerFilter] = useState('all'); // 'all' | 'active' | 'paused' | 'delivery' | 'pickup'
@@ -2536,92 +2542,18 @@ export default function AdminPortal({
       )}
 
       {/* ========================================================================= */}
-      {/* 5. DABBA CIRCULATION FLEET (PRESERVED) */}
+      {/* 5. DABBA CIRCULATION FLEET & MANAGEMENT (MODERN OS) */}
       {/* ========================================================================= */}
       {activeTab === 'dabbas' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-white rounded-3xl p-6 border border-edge shadow-apple-card flex flex-col justify-between">
-              <span className="text-xs font-bold text-charcoal-muted uppercase tracking-wider block">In Godown (Sanitized)</span>
-              <span className="text-4xl font-extrabold text-forest-700 mt-2 block tracking-tight">{inGodown}</span>
-              <span className="text-[11px] text-forest-700 font-bold mt-2 block">Available for packaging</span>
-            </div>
-            <div className="bg-white rounded-3xl p-6 border border-edge shadow-apple-card flex flex-col justify-between">
-              <span className="text-xs font-bold text-charcoal-muted uppercase tracking-wider block">With Delivery Boys</span>
-              <span className="text-4xl font-extrabold text-warmamber-600 mt-2 block tracking-tight">{withDelivery}</span>
-              <span className="text-[11px] text-charcoal-muted mt-2 block">In transit on active routes</span>
-            </div>
-            <div className="bg-white rounded-3xl p-6 border border-edge shadow-apple-card flex flex-col justify-between">
-              <span className="text-xs font-bold text-charcoal-muted uppercase tracking-wider block">Held by Customers</span>
-              <span className="text-4xl font-extrabold text-terracotta-500 mt-2 block tracking-tight">{withCustomer}</span>
-              <span className="text-[11px] text-charcoal-muted mt-2 block">Awaiting next return pickup</span>
-            </div>
-            <div className="bg-white rounded-3xl p-6 border border-edge shadow-apple-card flex flex-col justify-between">
-              <span className="text-xs font-bold text-charcoal-muted uppercase tracking-wider block">Unreturned Alert (&gt; 3 Days)</span>
-              <span className="text-4xl font-extrabold text-red-600 mt-2 block tracking-tight">{missingAlert}</span>
-              <span className="text-[11px] text-red-600 font-bold mt-2 block">Action trigger sent</span>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-3xl border border-edge shadow-apple-card overflow-hidden">
-            <div className="p-5 border-b border-edge flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-charcoal">QR Box Accountability Ledger</h3>
-                <p className="text-xs text-charcoal-muted">Individual physical container history, custody & verification</p>
-              </div>
-              <span className="text-xs font-bold px-3 py-1 rounded-full bg-forest-50 text-forest-700 border border-forest-100">
-                Circulation Recovery: 98.1%
-              </span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-cream-100/80 border-b border-edge text-charcoal-muted">
-                  <tr>
-                    <th className="p-4 font-bold">Box Barcode/QR</th>
-                    <th className="p-4 font-bold">Circulation Status</th>
-                    <th className="p-4 font-bold">Current Custody Holder</th>
-                    <th className="p-4 font-bold">Last Verified Timestamp</th>
-                    <th className="p-4 font-bold text-right">Verification</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-edge">
-                  {dabbas.map((d) => (
-                    <tr key={d.code} className="hover:bg-cream-50/70">
-                      <td className="p-4 font-bold text-charcoal flex items-center gap-2.5">
-                        <QrCode className="w-4 h-4 text-forest-700" />
-                        <span className="tracking-wide">{d.code}</span>
-                      </td>
-                      <td className="p-4">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                          d.status === 'in_godown'
-                            ? 'bg-forest-50 text-forest-700'
-                            : d.status === 'with_customer'
-                            ? 'bg-cream-200 text-charcoal'
-                            : d.status === 'with_delivery'
-                            ? 'bg-warmamber-50 text-warmamber-600'
-                            : 'bg-red-50 text-red-600 border border-red-100'
-                        }`}>
-                          {d.status.replace('_', ' ').toUpperCase()}
-                        </span>
-                      </td>
-                      <td className="p-4 font-semibold text-charcoal">{d.holder}</td>
-                      <td className="p-4 text-charcoal-muted font-medium">{d.lastUpdate}</td>
-                      <td className="p-4 text-right">
-                        <button
-                          onClick={() => showToast(`Box ${d.code} integrity verified. Custody valid.`)}
-                          className="px-3 py-1.5 text-xs font-bold rounded-xl bg-cream-100 border border-edge text-charcoal hover:bg-forest-50 hover:text-forest-700 apple-press"
-                        >
-                          Verify Box
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <DabbaFleetManager
+          dabbas={dabbas}
+          damagedLedger={damagedLedger}
+          onAddDabba={onAddDabba}
+          onBulkAddDabbas={onBulkAddDabbas}
+          onDecommissionDabba={onDecommissionDabba}
+          onDeleteDabba={onDeleteDabba}
+          showToast={showToast}
+        />
       )}
 
       {/* ========================================================================= */}

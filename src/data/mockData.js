@@ -3054,3 +3054,33 @@ export const dispatchChecklist = [
   { id: "CHK-4", label: "Temperature & freshness audit completed", checked: true },
   { id: "CHK-5", label: "Biodegradable wooden cutlery & napkins attached", checked: false }
 ];
+
+export const initialDamagedDabbas = [
+  {
+    id: "SCRAP-001",
+    retiredCode: "DB-088",
+    decommissionDate: "2026-10-24",
+    decommissionTime: "04:30 PM",
+    reasonCategory: "Broken Lid / Clip Damaged",
+    notes: "Stainless steel locking clip snapped during godown high-pressure steam washing.",
+    reportedBy: "Ramesh Sharma (Kitchen Head)",
+    previousHolder: "Godown Sanitized Rack",
+    previousStatus: "in_godown",
+    replacementCode: "DB-101",
+    qrStatus: "Permanently Blacklisted"
+  },
+  {
+    id: "SCRAP-002",
+    retiredCode: "DB-095",
+    decommissionDate: "2026-10-28",
+    decommissionTime: "01:15 PM",
+    reasonCategory: "Leakage / Heavy Dent",
+    notes: "Tiffin container slipped on bike footboard during Alipiri delivery; base dented causing vacuum seal breach.",
+    reportedBy: "Raju Kumar (Delivery Hero)",
+    previousHolder: "Raju Kumar (DBOY-01)",
+    previousStatus: "with_delivery",
+    replacementCode: "DB-105",
+    qrStatus: "Permanently Blacklisted"
+  }
+];
+
