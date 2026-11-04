@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import CustomerPortal from './components/CustomerPortal';
 import DeliveryPortal from './components/DeliveryPortal';
+import DriverCopilotApp from './copilot/DriverCopilotApp';
 import KitchenPortal from './components/KitchenPortal';
 import AdminPortal from './components/AdminPortal';
 import QRModal from './components/QRModal';
@@ -230,6 +231,19 @@ export default function App() {
     }));
   };
 
+  // URL Hash Listener for direct Driver Copilot access (#/copilot or #copilot)
+  useEffect(() => {
+    const handleHashSync = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#copilot' || hash === '#/copilot' || hash === '#driver' || hash === '#driver-copilot') {
+        setCurrentRole('delivery');
+      }
+    };
+    handleHashSync();
+    window.addEventListener('hashchange', handleHashSync);
+    return () => window.removeEventListener('hashchange', handleHashSync);
+  }, []);
+
   // Handler: Delivery Boy Updates Delivery Status
   const handleUpdateDeliveryStatus = (customerId, status) => {
     setCustomers(prev => prev.map(c => {
@@ -274,9 +288,32 @@ export default function App() {
     }
   };
 
+  // Report Delivery Issue from Driver Copilot
+  const handleReportDeliveryIssue = (reportData) => {
+    setCustomers(prev => prev.map(c => {
+      if (c.id === reportData.customerId) {
+        return {
+          ...c,
+          todayDeliveryStatus: 'Not Available',
+          deliveryIssue: reportData
+        };
+      }
+      return c;
+    }));
+
+    setUrgentInstructions(prev => [
+      {
+        id: `URG-${Date.now()}`,
+        message: `🚨 Driver Copilot Alert: ${reportData.customerName} marked "${reportData.reasonLabel}" at ${reportData.timestamp}. Notes: ${reportData.notes || 'None'}`,
+        time: reportData.timestamp
+      },
+      ...prev
+    ]);
+  };
+
   // Execute QR Scan Result
-  const handleScanComplete = (scannedCode, actionType) => {
-    const custId = qrModal.targetCustomerId;
+  const handleScanComplete = (scannedCode, actionType = 'deliver', targetCustId = null) => {
+    const custId = targetCustId || qrModal.targetCustomerId;
     const cust = customers.find(c => c.id === custId);
 
     if (actionType === 'deliver') {
@@ -737,17 +774,19 @@ export default function App() {
   return (
     <div className="min-h-screen bg-cream-100 flex flex-col text-charcoal font-apple antialiased">
       
-      {/* Top Navbar */}
-      <Navbar
-        currentRole={currentRole}
-        setCurrentRole={setCurrentRole}
-        currentUser={currentUser}
-        onLogout={handleLogout}
-      />
+      {/* Top Navbar (Hidden when Driver Copilot is full-screen) */}
+      {currentRole !== 'delivery' && (
+        <Navbar
+          currentRole={currentRole}
+          setCurrentRole={setCurrentRole}
+          currentUser={currentUser}
+          onLogout={handleLogout}
+        />
+      )}
 
       {/* Main Responsive Canvas */}
-      <main className="flex-1 p-2 sm:p-6 lg:p-8 flex justify-center w-full pb-24 md:pb-8">
-        <div className="w-full max-w-[1520px] animate-fade-in">
+      <main className={`flex-1 flex justify-center w-full ${currentRole === 'delivery' ? 'p-0 pb-0' : 'p-2 sm:p-6 lg:p-8 pb-24 md:pb-8'}`}>
+        <div className={`w-full ${currentRole === 'delivery' ? 'max-w-none' : 'max-w-[1520px]'} animate-fade-in`}>
           {currentRole === 'customer' && (
             <CustomerPortal
               customer={currentCustomer}
@@ -766,15 +805,14 @@ export default function App() {
             />
           )}
           {currentRole === 'delivery' && (
-            <DeliveryPortal
-              deliveryBoy={deliveryBoys[0]}
+            <DriverCopilotApp
+              deliveryBoys={deliveryBoys}
               customers={customers}
+              dabbas={dabbas}
               onUpdateDeliveryStatus={handleUpdateDeliveryStatus}
-              onScanDabba={handleOpenScanner}
-              onHandoverToGodown={handleHandoverToGodown}
-              onSendReturnAlert={() => {}}
-              onCheckInOut={handleCheckInOut}
-              urgentInstructions={urgentInstructions}
+              onScanDabba={handleScanComplete}
+              onReportIssue={handleReportDeliveryIssue}
+              onExitToAdmin={() => setCurrentRole('admin')}
             />
           )}
           {currentRole === 'kitchen' && (
@@ -855,14 +893,16 @@ export default function App() {
       />
 
       {/* Subtle Apple-style Minimal Footer */}
-      <footer className="border-t border-edge bg-white/70 backdrop-blur-md py-4 px-6 text-center text-xs text-charcoal-muted">
-        <div className="max-w-[1520px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>&copy; 2026 Healthi Dabba Logistics & Nutrition. All rights reserved.</span>
-          <span className="text-[11px] text-charcoal-subtle">
-            Apple SF Pro Typography • No Neon Palette • Circular Zero-Loss Dabba Lifecycle
-          </span>
-        </div>
-      </footer>
+      {currentRole !== 'delivery' && (
+        <footer className="border-t border-edge bg-white/70 backdrop-blur-md py-4 px-6 text-center text-xs text-charcoal-muted">
+          <div className="max-w-[1520px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>&copy; 2026 Healthi Dabba Logistics & Nutrition. All rights reserved.</span>
+            <span className="text-[11px] text-charcoal-subtle">
+              Apple SF Pro Typography • No Neon Palette • Circular Zero-Loss Dabba Lifecycle
+            </span>
+          </div>
+        </footer>
+      )}
     </div>
   );
 }

@@ -17,7 +17,7 @@ export default function Navbar({
 }) {
   const roles = [
     { id: 'admin', label: 'Admin OS', shortLabel: 'Admin', icon: ShieldCheck },
-    { id: 'delivery', label: 'Driver Cockpit', shortLabel: 'Driver', icon: Bike },
+    { id: 'delivery', label: 'Driver Copilot', shortLabel: 'Copilot', icon: Bike },
     { id: 'kitchen', label: 'Kitchen & Godown', shortLabel: 'Kitchen', icon: ChefHat },
     { id: 'customer', label: 'Customer App', shortLabel: 'Customer', icon: User },
   ];
