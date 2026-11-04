@@ -708,8 +708,8 @@ export default function AdminPortal({
         </div>
       </div>
 
-      {/* Core Navigation Tabs */}
-      <div className="flex items-center gap-1.5 p-1 bg-cream-100 rounded-2xl border border-edge overflow-x-auto no-scrollbar">
+      {/* Core Navigation Tabs (Sticky on Mobile) */}
+      <div className="sticky top-14 sm:top-16 z-30 flex items-center gap-1.5 p-1.5 bg-white/95 sm:bg-cream-100 backdrop-blur-xl rounded-2xl border border-edge shadow-xs overflow-x-auto no-scrollbar scroll-smooth">
         {[
           { id: 'customers', label: 'Customer Portal', icon: Users, badge: customers.length },
           { id: 'staff', label: 'Staff Fleet & Kitchen', icon: Bike, badge: deliveryBoys.length + kitchenStaff.length },
@@ -915,7 +915,147 @@ export default function AdminPortal({
               </button>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Mobile Touch Cards List (Visible on Mobile screens) */}
+            <div className="md:hidden divide-y divide-edge">
+              {filteredCustomers.map((cust) => {
+                const custRoute = routes.find(r => r.id === cust.routeId);
+                const isCancelled = cust.todayDeliveryStatus === 'Cancelled' || cust.subscriptionStatus === 'Cancelled';
+                const isPaused = cust.todayDeliveryStatus === 'On Leave';
+                const hasPickupDue = cust.dabbasHeld && cust.dabbasHeld.length > 0;
+
+                return (
+                  <div key={cust.id} className="p-3.5 space-y-2.5 bg-white hover:bg-cream-50/50 transition-colors">
+                    {/* Header: ID, Name, Eye button, Delivery Status Badge */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => onSelectCustomer && onSelectCustomer(cust.id)}
+                          className="w-8 h-8 rounded-xl bg-forest-50 text-forest-700 border border-forest-100 flex items-center justify-center flex-shrink-0 apple-press"
+                          title="Open Customer App"
+                        >
+                          <Eye className="w-4 h-4 text-forest-700" />
+                        </button>
+                        <div className="min-w-0">
+                          <h4 
+                            onClick={() => onSelectCustomer && onSelectCustomer(cust.id)}
+                            className="font-bold text-sm text-charcoal truncate cursor-pointer hover:text-forest-700 text-left"
+                          >
+                            {cust.name}
+                          </h4>
+                          <div className="flex items-center gap-1.5 text-[10px] text-charcoal-muted font-mono">
+                            <span>{cust.id}</span>
+                            <span>•</span>
+                            <span className="font-sans font-bold text-forest-800">
+                              {custRoute?.name ? custRoute.name.split('—')[0] : cust.routeId}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0 ${
+                        isCancelled
+                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                          : isPaused
+                          ? 'bg-warmamber-50 text-warmamber-700 border border-warmamber-200'
+                          : cust.todayDeliveryStatus === 'Delivered'
+                          ? 'bg-forest-50 text-forest-700 border border-forest-100'
+                          : 'bg-cream-200 text-charcoal'
+                      }`}>
+                        {cust.todayDeliveryStatus}
+                      </span>
+                    </div>
+
+                    {/* Address & Direct Phone Dialer */}
+                    <div className="flex items-center justify-between text-xs bg-cream-50/80 p-2.5 rounded-2xl border border-edge/60">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1 text-[11px] text-charcoal-muted">
+                          <MapPin className="w-3.5 h-3.5 text-forest-700 flex-shrink-0" />
+                          <span className="truncate">{cust.address}</span>
+                        </div>
+                      </div>
+                      <a 
+                        href={`tel:${cust.phone}`}
+                        className="ml-2 px-2.5 py-1 rounded-xl bg-white border border-edge text-forest-800 font-bold text-[11px] flex items-center gap-1 shadow-xs flex-shrink-0 apple-press"
+                      >
+                        <Phone className="w-3 h-3 text-forest-700" />
+                        <span>Call</span>
+                      </a>
+                    </div>
+
+                    {/* Subscription & Dabba Info */}
+                    <div className="flex items-center justify-between text-xs pt-0.5">
+                      <div>
+                        <span className="font-bold text-charcoal text-xs block">
+                          {cust.subscriptionType.split('(')[0]}
+                        </span>
+                        <span className="text-[10px] text-charcoal-muted block">
+                          {cust.remainingDays} days remaining ({cust.startDate} to {cust.endDate})
+                        </span>
+                      </div>
+
+                      {hasPickupDue ? (
+                        <span className="px-2 py-1 rounded-xl text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
+                          <Package className="w-3 h-3 text-amber-700" />
+                          <span>Pickup: {cust.dabbasHeld.join(', ')}</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-forest-700 font-semibold">
+                          ✓ Box Returned
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Mobile 1-Tap Actions */}
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => onToggleSkipToday(cust.id)}
+                        className={`flex-1 py-1.5 px-2 text-[11px] font-bold rounded-xl border transition-all flex items-center justify-center gap-1 apple-press ${
+                          isPaused
+                            ? 'bg-forest-50 text-forest-700 border-forest-200 hover:bg-forest-100'
+                            : 'bg-cream-100 text-charcoal hover:bg-amber-50 hover:text-amber-800 border-edge'
+                        }`}
+                      >
+                        {isPaused ? <Play className="w-3 h-3 text-forest-600" /> : <Pause className="w-3 h-3 text-amber-600" />}
+                        <span>{isPaused ? 'Resume Today' : 'Pause Today'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenLeaveModal(cust)}
+                        className="flex-1 py-1.5 px-2 text-[11px] font-bold rounded-xl bg-cream-100 hover:bg-white text-charcoal border border-edge flex items-center justify-center gap-1 apple-press"
+                      >
+                        <Calendar className="w-3 h-3 text-forest-700" />
+                        <span>Schedule Leave</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`Cancel subscription for ${cust.name}?`)) {
+                            handleOpenCancelModal(cust);
+                          }
+                        }}
+                        className="p-1.5 rounded-xl bg-cream-100 hover:bg-rose-50 text-charcoal-subtle hover:text-rose-600 border border-edge apple-press"
+                        title="Delete / Cancel"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {filteredCustomers.length === 0 && (
+                <div className="p-8 text-center text-xs text-charcoal-muted italic">
+                  No customers found matching your search query or filter.
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Table View (Hidden on Mobile screens) */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-cream-100/80 border-b border-edge text-charcoal-muted">
                   <tr>
@@ -1376,7 +1516,109 @@ export default function AdminPortal({
           {/* SUB-VIEW 1: DELIVERY DRIVERS TABLE */}
           {staffSubTab === 'delivery' && (
             <div className="bg-white rounded-3xl border border-edge shadow-apple-card overflow-hidden">
-              <div className="overflow-x-auto">
+              
+              {/* Mobile Touch Cards for Drivers */}
+              <div className="md:hidden divide-y divide-edge">
+                {deliveryBoys.map((boy) => (
+                  <div key={boy.id} className="p-3.5 space-y-3 bg-white hover:bg-cream-50/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        {boy.photo ? (
+                          <img
+                            src={boy.photo}
+                            alt={boy.name}
+                            className="w-10 h-10 rounded-2xl object-cover border border-edge shrink-0 shadow-apple-sm"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-2xl bg-forest-50 border border-forest-100 flex items-center justify-center text-forest-700 shrink-0">
+                            <Bike className="w-5 h-5" />
+                          </div>
+                        )}
+                        <div>
+                          <span className="font-bold text-charcoal text-sm block">{boy.name}</span>
+                          <span className="text-[10px] text-charcoal-muted font-mono">{boy.id}</span>
+                        </div>
+                      </div>
+
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        boy.status === 'Checked In' ? 'bg-forest-50 text-forest-700 border border-forest-100' : 'bg-cream-200 text-charcoal-muted'
+                      }`}>
+                        {boy.status}
+                      </span>
+                    </div>
+
+                    {/* Phone & Secondary Phone */}
+                    <div className="flex items-center justify-between text-xs bg-cream-50/80 p-2.5 rounded-2xl border border-edge/60">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5 font-bold text-charcoal text-xs">
+                          <Phone className="w-3.5 h-3.5 text-forest-700 shrink-0" />
+                          <span>{boy.phone}</span>
+                        </div>
+                        {boy.secondaryPhone && (
+                          <div className="text-[10px] text-charcoal-muted">
+                            Alt: {boy.secondaryPhone}
+                          </div>
+                        )}
+                      </div>
+                      <a 
+                        href={`tel:${boy.phone}`}
+                        className="px-3 py-1 rounded-xl bg-white border border-edge text-forest-800 font-bold text-xs flex items-center gap-1 shadow-xs apple-press"
+                      >
+                        <Phone className="w-3 h-3 text-forest-700" />
+                        <span>Call</span>
+                      </a>
+                    </div>
+
+                    {/* Route & Customer Count */}
+                    <div className="flex items-center justify-between gap-2 pt-0.5">
+                      <div className="flex-1">
+                        <select
+                          value={boy.assignedRouteId || ''}
+                          onChange={(e) => handleQuickRouteReassign(boy.id, e.target.value)}
+                          className="w-full px-2.5 py-1.5 rounded-xl bg-forest-50 text-forest-800 border border-forest-200/80 font-bold text-xs focus:outline-none"
+                        >
+                          {routes.map(r => (
+                            <option key={r.id} value={r.id}>
+                              📍 {r.name.split('—')[0]}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <span className="px-2.5 py-1.5 rounded-xl bg-cream-100 border border-edge text-xs font-bold text-charcoal shrink-0">
+                        {boy.assignedCustomerIds?.length || 0} Stops
+                      </span>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setEditingStaff({ type: 'driver', data: { ...boy } })}
+                          className="p-1.5 text-forest-700 hover:bg-forest-50 rounded-xl transition-all border border-edge bg-white"
+                          title="Edit Driver"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`Delete delivery driver ${boy.name}?`)) {
+                              onDeleteDeliveryBoy(boy.id);
+                              showToast(`Driver ${boy.name} removed.`);
+                            }
+                          }}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-xl transition-all border border-edge bg-white"
+                          title="Delete Driver"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-cream-100/80 border-b border-edge text-charcoal-muted">
                     <tr>
@@ -1508,7 +1750,85 @@ export default function AdminPortal({
           {/* SUB-VIEW 2: KITCHEN STAFF TABLE */}
           {staffSubTab === 'kitchen' && (
             <div className="bg-white rounded-3xl border border-edge shadow-apple-card overflow-hidden">
-              <div className="overflow-x-auto">
+              
+              {/* Mobile Touch Cards for Kitchen Staff */}
+              <div className="md:hidden divide-y divide-edge">
+                {kitchenStaff.map((staff) => (
+                  <div key={staff.id} className="p-3.5 space-y-3 bg-white hover:bg-cream-50/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        {staff.photo ? (
+                          <img
+                            src={staff.photo}
+                            alt={staff.name}
+                            className="w-10 h-10 rounded-2xl object-cover border border-edge shrink-0 shadow-apple-sm"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-2xl bg-forest-50 border border-forest-100 flex items-center justify-center text-forest-700 shrink-0">
+                            <ChefHat className="w-5 h-5" />
+                          </div>
+                        )}
+                        <div>
+                          <span className="font-bold text-charcoal text-sm block">{staff.name}</span>
+                          <span className="text-[10px] text-charcoal-muted font-mono">{staff.id} • {staff.role}</span>
+                        </div>
+                      </div>
+
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-forest-50 text-forest-700 border border-forest-100">
+                        {staff.status}
+                      </span>
+                    </div>
+
+                    {/* Contact & Shift Station */}
+                    <div className="flex items-center justify-between text-xs bg-cream-50/80 p-2.5 rounded-2xl border border-edge/60">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5 font-bold text-charcoal text-xs">
+                          <Phone className="w-3.5 h-3.5 text-forest-700 shrink-0" />
+                          <span>{staff.phone}</span>
+                        </div>
+                        <div className="text-[10px] text-charcoal-muted">
+                          Station: <strong className="text-charcoal">{staff.station}</strong> ({staff.shift})
+                        </div>
+                      </div>
+                      <a 
+                        href={`tel:${staff.phone}`}
+                        className="px-3 py-1 rounded-xl bg-white border border-edge text-forest-800 font-bold text-xs flex items-center gap-1 shadow-xs apple-press"
+                      >
+                        <Phone className="w-3 h-3 text-forest-700" />
+                        <span>Call</span>
+                      </a>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-end gap-1.5 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setEditingStaff({ type: 'kitchen', data: { ...staff } })}
+                        className="px-3 py-1.5 text-xs font-bold rounded-xl border border-edge bg-white hover:bg-forest-50 text-forest-800 flex items-center gap-1"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        <span>Edit Profile</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(`Delete kitchen staff member ${staff.name}?`)) {
+                            onDeleteKitchenStaff(staff.id);
+                            showToast(`Kitchen staff ${staff.name} removed.`);
+                          }
+                        }}
+                        className="p-1.5 rounded-xl border border-edge bg-white hover:bg-rose-50 text-red-600"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-cream-100/80 border-b border-edge text-charcoal-muted">
                     <tr>

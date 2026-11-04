@@ -334,7 +334,65 @@ export default function DabbaFleetManager({
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile Touch Cards for Damaged Ledger (Visible on Mobile screens) */}
+          <div className="md:hidden divide-y divide-edge">
+            {filteredDamagedDabbas.length === 0 ? (
+              <div className="p-8 text-center text-charcoal-muted font-semibold text-xs">
+                No damaged boxes recorded yet. Clean fleet integrity!
+              </div>
+            ) : (
+              filteredDamagedDabbas.map((entry) => (
+                <div key={entry.id} className="p-3.5 space-y-2 bg-rose-50/20 hover:bg-rose-50/40 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-black text-sm text-rose-800 line-through">
+                        {entry.retiredCode}
+                      </span>
+                      <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-rose-100 text-rose-700">
+                        SCRAPPED
+                      </span>
+                    </div>
+
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-charcoal text-white tracking-wider">
+                      NEVER REUSE
+                    </span>
+                  </div>
+
+                  {/* Reason & Date */}
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                      {entry.reasonCategory}
+                    </span>
+                    <span className="text-[10px] text-charcoal-muted">
+                      {entry.decommissionDate} • {entry.decommissionTime}
+                    </span>
+                  </div>
+
+                  {/* Incident Notes */}
+                  <p className="text-xs text-charcoal-muted bg-white/80 p-2 rounded-xl border border-edge/60 leading-relaxed">
+                    "{entry.notes}"
+                  </p>
+
+                  {/* Replacement Box & Reporter */}
+                  <div className="flex items-center justify-between text-[11px] pt-0.5">
+                    <span className="text-charcoal-muted">
+                      By: <strong className="text-charcoal">{entry.reportedBy}</strong>
+                    </span>
+                    {entry.replacementCode ? (
+                      <span className="text-forest-800 font-bold">
+                        Replaced with: <strong className="font-mono">{entry.replacementCode}</strong>
+                      </span>
+                    ) : (
+                      <span className="text-charcoal-muted">No replacement</span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table View (Hidden on Mobile screens) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-cream-100/80 border-b border-edge text-charcoal-muted">
                 <tr>
@@ -468,7 +526,65 @@ export default function DabbaFleetManager({
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile Touch Cards for Damaged Ledger (Visible on Mobile screens) */}
+          <div className="md:hidden divide-y divide-edge">
+            {filteredDamagedDabbas.length === 0 ? (
+              <div className="p-8 text-center text-charcoal-muted font-semibold text-xs">
+                No damaged boxes recorded yet. Clean fleet integrity!
+              </div>
+            ) : (
+              filteredDamagedDabbas.map((entry) => (
+                <div key={entry.id} className="p-3.5 space-y-2 bg-rose-50/20 hover:bg-rose-50/40 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-black text-sm text-rose-800 line-through">
+                        {entry.retiredCode}
+                      </span>
+                      <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-rose-100 text-rose-700">
+                        SCRAPPED
+                      </span>
+                    </div>
+
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-charcoal text-white tracking-wider">
+                      NEVER REUSE
+                    </span>
+                  </div>
+
+                  {/* Reason & Date */}
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                      {entry.reasonCategory}
+                    </span>
+                    <span className="text-[10px] text-charcoal-muted">
+                      {entry.decommissionDate} • {entry.decommissionTime}
+                    </span>
+                  </div>
+
+                  {/* Incident Notes */}
+                  <p className="text-xs text-charcoal-muted bg-white/80 p-2 rounded-xl border border-edge/60 leading-relaxed">
+                    "{entry.notes}"
+                  </p>
+
+                  {/* Replacement Box & Reporter */}
+                  <div className="flex items-center justify-between text-[11px] pt-0.5">
+                    <span className="text-charcoal-muted">
+                      By: <strong className="text-charcoal">{entry.reportedBy}</strong>
+                    </span>
+                    {entry.replacementCode ? (
+                      <span className="text-forest-800 font-bold">
+                        Replaced with: <strong className="font-mono">{entry.replacementCode}</strong>
+                      </span>
+                    ) : (
+                      <span className="text-charcoal-muted">No replacement</span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table View (Hidden on Mobile screens) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-cream-100/80 border-b border-edge text-charcoal-muted">
                 <tr>
@@ -555,9 +671,12 @@ export default function DabbaFleetManager({
       {/* UNIFIED MODAL: ADD WHATEVER UNITS YOU WANT */}
       {/* ========================================================================= */}
       {isAddUnitsModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-lg p-6 sm:p-7 shadow-apple-modal border border-edge space-y-5">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-lg p-5 sm:p-7 shadow-apple-modal border border-edge space-y-4 max-h-[92vh] overflow-y-auto">
             
+            {/* Mobile Sheet Handle */}
+            <div className="w-12 h-1 bg-charcoal/20 rounded-full mx-auto -mt-1 mb-2 sm:hidden"></div>
+
             <div className="flex items-center justify-between border-b border-edge pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-2xl bg-forest-700 text-white flex items-center justify-center shadow-sm">
@@ -772,9 +891,12 @@ export default function DabbaFleetManager({
       {/* MODAL: DECOMMISSION & DAMAGE REPORT (UNIQUE QR BLACKLIST) */}
       {/* ========================================================================= */}
       {decommissionModal.isOpen && decommissionModal.dabba && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-lg p-6 sm:p-7 shadow-apple-modal border border-edge space-y-5">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-lg p-5 sm:p-7 shadow-apple-modal border border-edge space-y-4 max-h-[92vh] overflow-y-auto">
             
+            {/* Mobile Sheet Handle */}
+            <div className="w-12 h-1 bg-charcoal/20 rounded-full mx-auto -mt-1 mb-2 sm:hidden"></div>
+
             <div className="flex items-center justify-between border-b border-edge pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center shadow-sm">

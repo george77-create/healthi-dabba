@@ -746,7 +746,7 @@ export default function App() {
       />
 
       {/* Main Responsive Canvas */}
-      <main className="flex-1 p-3 sm:p-6 lg:p-8 flex justify-center w-full">
+      <main className="flex-1 p-2 sm:p-6 lg:p-8 flex justify-center w-full pb-24 md:pb-8">
         <div className="w-full max-w-[1520px] animate-fade-in">
           {currentRole === 'customer' && (
             <CustomerPortal

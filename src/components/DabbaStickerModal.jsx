@@ -146,7 +146,7 @@ export default function DabbaStickerModal({ isOpen, onClose, dabbas = [] }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/60 backdrop-blur-sm animate-fade-in">
       
       {/* Print Specific Inline Styles */}
       <style>{`
@@ -172,31 +172,34 @@ export default function DabbaStickerModal({ isOpen, onClose, dabbas = [] }) {
         }
       `}</style>
 
-      <div className="bg-white rounded-3xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-apple-modal border border-edge overflow-hidden">
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-5xl h-[92vh] sm:max-h-[92vh] flex flex-col shadow-apple-modal border border-edge overflow-hidden">
         
+        {/* Mobile Swipe Handle */}
+        <div className="w-12 h-1 bg-charcoal/20 rounded-full mx-auto mt-2 sm:hidden"></div>
+
         {/* Header */}
-        <div className="p-5 sm:p-6 border-b border-edge flex items-center justify-between bg-cream-50/70">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-forest-700 text-cream-50 flex items-center justify-center shadow-apple-sm">
-              <QrCode className="w-6 h-6 text-cream-100" />
+        <div className="p-3.5 sm:p-6 border-b border-edge flex items-center justify-between bg-cream-50/70">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-forest-700 text-cream-50 flex items-center justify-center shadow-apple-sm flex-shrink-0">
+              <QrCode className="w-5 h-5 sm:w-6 sm:h-6 text-cream-100" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-charcoal">QR Code Sticker Sheet Generator</h2>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-forest-100 text-forest-800">
-                  {filteredDabbas.length} Stickers Ready
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h2 className="text-base sm:text-lg font-bold text-charcoal truncate">QR Sticker Sheet</h2>
+                <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-forest-100 text-forest-800 flex-shrink-0">
+                  {filteredDabbas.length} Labels
                 </span>
               </div>
-              <p className="text-xs text-charcoal-muted">
+              <p className="text-[11px] text-charcoal-muted truncate hidden sm:block">
                 Print or export compact adhesive stickers for physical stainless steel tiffins
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={handleDownloadSheet}
-              className="px-3.5 py-2 rounded-xl bg-cream-100 hover:bg-cream-200 text-charcoal font-bold text-xs border border-edge flex items-center gap-1.5 apple-press shadow-xs"
+              className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-cream-100 hover:bg-cream-200 text-charcoal font-bold text-xs border border-edge flex items-center gap-1.5 apple-press shadow-xs"
               title="Download standalone HTML file with all sticker labels"
             >
               <Download className="w-4 h-4 text-forest-700" />
@@ -205,16 +208,16 @@ export default function DabbaStickerModal({ isOpen, onClose, dabbas = [] }) {
 
             <button
               onClick={handlePrint}
-              className="px-4 py-2 rounded-xl bg-forest-700 hover:bg-forest-800 text-white font-bold text-xs flex items-center gap-1.5 apple-press shadow-apple-sm"
+              className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-forest-700 hover:bg-forest-800 text-white font-bold text-xs flex items-center gap-1.5 apple-press shadow-apple-sm"
               title="Print directly on adhesive paper (Ctrl+P)"
             >
               <Printer className="w-4 h-4 text-cream-100" />
-              <span>Print Stickers</span>
+              <span>Print</span>
             </button>
 
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-xl bg-cream-100 hover:bg-cream-200 text-charcoal flex items-center justify-center border border-edge apple-press ml-1"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-cream-100 hover:bg-cream-200 text-charcoal flex items-center justify-center border border-edge apple-press ml-0.5"
             >
               <X className="w-4 h-4" />
             </button>

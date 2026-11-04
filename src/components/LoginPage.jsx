@@ -73,36 +73,36 @@ export default function LoginPage({ onLogin }) {
   };
 
   return (
-    <div className="min-h-screen bg-cream-100 flex flex-col justify-between p-4 sm:p-6 lg:p-8 font-apple antialiased selection:bg-forest-100 selection:text-forest-800">
+    <div className="min-h-screen bg-cream-100 flex flex-col justify-between p-3 sm:p-6 lg:p-8 font-apple antialiased selection:bg-forest-100 selection:text-forest-800">
       
       {/* Top Header Branding */}
       <header className="max-w-6xl mx-auto w-full flex items-center justify-between py-2">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-forest-700 flex items-center justify-center text-cream-50 shadow-apple-sm">
-            <Package className="w-5 h-5 text-cream-100" />
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-forest-700 flex items-center justify-center text-cream-50 shadow-apple-sm flex-shrink-0">
+            <Package className="w-4 h-4 sm:w-5 sm:h-5 text-cream-100" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-lg text-charcoal tracking-tight">Healthi Dabba</span>
-              <span className="px-2 py-0.5 text-[10px] font-bold bg-forest-50 text-forest-700 rounded-full border border-forest-100">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="font-bold text-base sm:text-lg text-charcoal tracking-tight">Healthi Dabba</span>
+              <span className="px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold bg-forest-50 text-forest-700 rounded-full border border-forest-100">
                 ADMIN CONSOLE
               </span>
             </div>
-            <p className="text-[11px] text-charcoal-muted hidden sm:block">
+            <p className="text-[10px] sm:text-[11px] text-charcoal-muted hidden sm:block">
               Zero-Loss Tiffin Logistics • Central Kitchen Command, Tirupati
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/90 border border-edge text-xs font-semibold text-charcoal shadow-xs">
+        <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-white/90 border border-edge text-xs font-semibold text-charcoal shadow-xs">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span className="text-[11px] text-forest-800 font-bold">Admin Server Active</span>
+          <span className="text-[10px] sm:text-[11px] text-forest-800 font-bold">Admin Active</span>
         </div>
       </header>
 
       {/* Main Center Login Card */}
-      <main className="max-w-md mx-auto w-full my-auto py-8">
-        <div className="bg-white rounded-3xl p-7 sm:p-9 shadow-apple-modal border border-edge space-y-6">
+      <main className="max-w-md mx-auto w-full my-auto py-4 sm:py-8">
+        <div className="bg-white rounded-3xl p-5 sm:p-9 shadow-apple-modal border border-edge space-y-5 sm:space-y-6">
           
           {/* Card Header */}
           <div className="text-center space-y-2">
