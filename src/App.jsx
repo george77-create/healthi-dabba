@@ -784,10 +784,20 @@ export default function App() {
               tasks={tasks}
               checklist={checklist}
               deliveryBoys={deliveryBoys}
+              dabbas={dabbas}
+              damagedLedger={damagedLedger}
               onAddStock={handleAddStock}
               onToggleChecklistItem={handleToggleChecklistItem}
               dailyMenu={dailyMenu}
               onAssignDabbaQR={() => {}}
+              onUpdateDabbaStatus={(code, newStatus, newHolder) => {
+                setDabbas(prev => prev.map(d => d.code === code ? { 
+                  ...d, 
+                  status: newStatus, 
+                  holder: newHolder || (newStatus === 'in_godown' ? 'Godown Sanitized Rack' : d.holder), 
+                  lastUpdate: new Date().toISOString().slice(0, 16).replace('T', ' ') 
+                } : d));
+              }}
             />
           )}
           {currentRole === 'admin' && (

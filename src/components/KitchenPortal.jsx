@@ -16,7 +16,12 @@ import {
   Sparkles,
   ArrowRight,
   ShieldCheck,
-  Utensils
+  Utensils,
+  Search,
+  Building2,
+  User,
+  RotateCcw,
+  RefreshCw
 } from 'lucide-react';
 
 export default function KitchenPortal({ 
@@ -26,14 +31,19 @@ export default function KitchenPortal({
   checklist = [], 
   deliveryBoys = [],
   dailyMenu = {},
+  dabbas = [],
+  damagedLedger = [],
   onAddStock,
   onToggleChecklistItem,
-  onAssignDabbaQR 
+  onAssignDabbaQR,
+  onUpdateDabbaStatus
 }) {
   const [activeTab, setActiveTab] = useState('prep'); // 'prep' | 'inventory' | 'workflow' | 'reports'
   const [showAddStockModal, setShowAddStockModal] = useState(false);
   const [newStockItem, setNewStockItem] = useState({ name: 'Organic Cucumbers', supplier: 'Farm Direct Agri', qty: '10', unit: 'kg' });
   const [toastMessage, setToastMessage] = useState(null);
+  const [auditSearch, setAuditSearch] = useState('');
+  const [auditFilter, setAuditFilter] = useState('all'); // 'all' | 'godown' | 'transit' | 'customer'
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -43,6 +53,23 @@ export default function KitchenPortal({
   const activeCount = customers.filter(c => c.todayDeliveryStatus !== 'On Leave' && c.todayDeliveryStatus !== 'Cancelled' && c.subscriptionStatus !== 'Cancelled').length;
   const unsunCount = customers.filter(c => c.subscriptionType.includes('UNSUN') && c.todayDeliveryStatus !== 'On Leave' && c.todayDeliveryStatus !== 'Cancelled' && c.subscriptionStatus !== 'Cancelled').length;
   const altCount = customers.filter(c => c.subscriptionType.includes('Alternative') && c.todayDeliveryStatus !== 'On Leave' && c.todayDeliveryStatus !== 'Cancelled' && c.subscriptionStatus !== 'Cancelled').length;
+
+  // Live dynamic dabba audit counts
+  const cleanInGodown = dabbas.filter(d => d.status === 'in_godown').length;
+  const inTransit = dabbas.filter(d => d.status === 'with_delivery').length;
+  const withCustomer = dabbas.filter(d => d.status === 'with_customer').length;
+  const totalCirculation = dabbas.length;
+  const totalDamaged = damagedLedger.length;
+
+  const filteredAuditDabbas = dabbas.filter(d => {
+    const matches = d.code.toLowerCase().includes(auditSearch.toLowerCase()) ||
+                    d.holder.toLowerCase().includes(auditSearch.toLowerCase());
+    if (!matches) return false;
+    if (auditFilter === 'godown') return d.status === 'in_godown';
+    if (auditFilter === 'transit') return d.status === 'with_delivery';
+    if (auditFilter === 'customer') return d.status === 'with_customer';
+    return true;
+  });
 
   const handleStockSubmit = (e) => {
     e.preventDefault();
@@ -443,36 +470,265 @@ export default function KitchenPortal({
       {/* BOX AUDIT & REPORTS */}
       {activeTab === 'reports' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white rounded-3xl p-6 border border-edge shadow-apple-card">
-              <span className="text-xs font-bold text-charcoal-muted uppercase tracking-wider block">Clean Boxes in Godown</span>
-              <span className="text-4xl font-extrabold text-forest-700 mt-2 block tracking-tight">58</span>
-              <span className="text-xs text-charcoal-muted mt-2 block">Sanitized & ready for next pack</span>
+          
+          {/* Top Live Metric Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 sm:gap-4">
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-edge shadow-apple-card flex flex-col justify-between">
+              <span className="text-[11px] font-bold text-charcoal-muted uppercase tracking-wider block">Clean Boxes in Godown</span>
+              <span className="text-3xl sm:text-4xl font-extrabold text-forest-700 mt-2 block tracking-tight">{cleanInGodown}</span>
+              <span className="text-[11px] text-forest-700 font-semibold mt-1 block">Sanitized & ready for next pack</span>
             </div>
 
-            <div className="bg-white rounded-3xl p-6 border border-edge shadow-apple-card">
-              <span className="text-xs font-bold text-charcoal-muted uppercase tracking-wider block">In Transit on Route</span>
-              <span className="text-4xl font-extrabold text-warmamber-600 mt-2 block tracking-tight">18</span>
-              <span className="text-xs text-charcoal-muted mt-2 block">Auto-assigned via QR scanning</span>
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-edge shadow-apple-card flex flex-col justify-between">
+              <span className="text-[11px] font-bold text-charcoal-muted uppercase tracking-wider block">In Transit on Route</span>
+              <span className="text-3xl sm:text-4xl font-extrabold text-warmamber-600 mt-2 block tracking-tight">{inTransit}</span>
+              <span className="text-[11px] text-charcoal-muted mt-1 block">With delivery boys</span>
             </div>
 
-            <div className="bg-white rounded-3xl p-6 border border-edge shadow-apple-card">
-              <span className="text-xs font-bold text-charcoal-muted uppercase tracking-wider block">Boxes with Customers</span>
-              <span className="text-4xl font-extrabold text-terracotta-500 mt-2 block tracking-tight">22</span>
-              <span className="text-xs text-charcoal-muted mt-2 block">Tracked against customer IDs</span>
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-edge shadow-apple-card flex flex-col justify-between">
+              <span className="text-[11px] font-bold text-charcoal-muted uppercase tracking-wider block">Held by Customers</span>
+              <span className="text-3xl sm:text-4xl font-extrabold text-terracotta-500 mt-2 block tracking-tight">{withCustomer}</span>
+              <span className="text-[11px] text-charcoal-muted mt-1 block">Pickup due next morning</span>
+            </div>
+
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-edge shadow-apple-card flex flex-col justify-between">
+              <span className="text-[11px] font-bold text-rose-700 uppercase tracking-wider block flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                <span>Damaged / Scrapped</span>
+              </span>
+              <span className="text-3xl sm:text-4xl font-extrabold text-rose-600 mt-2 block tracking-tight">{totalDamaged}</span>
+              <span className="text-[11px] text-rose-600 font-semibold mt-1 block">Blacklisted (Decommissioned)</span>
             </div>
           </div>
 
+          {/* Interactive Godown Audit Controls */}
+          <div className="bg-white rounded-3xl border border-edge shadow-apple-card overflow-hidden">
+            
+            <div className="p-4 sm:p-5 border-b border-edge flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-cream-50/50">
+              <div>
+                <h3 className="text-base font-bold text-charcoal">Godown Box Audit & Sanitization Verification</h3>
+                <p className="text-xs text-charcoal-muted mt-0.5">
+                  Verify individual tiffin container hygiene, scan integrity & restock returned empty boxes
+                </p>
+              </div>
 
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => showToast(`All ${cleanInGodown} Godown boxes verified. Steam sterilization log valid.`)}
+                  className="px-3.5 py-2 text-xs font-bold rounded-xl bg-forest-700 text-white hover:bg-forest-800 apple-press shadow-apple-sm flex items-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-cream-100" />
+                  <span>Verify Godown Rack</span>
+                </button>
+              </div>
+            </div>
 
-          <div className="bg-white rounded-3xl p-7 border border-edge shadow-apple-card space-y-3">
+            {/* Filter & Search Bar */}
+            <div className="p-4 border-b border-edge flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="relative w-full sm:max-w-xs">
+                <Search className="w-4 h-4 text-charcoal-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search box code (DB-101) or holder..."
+                  value={auditSearch}
+                  onChange={(e) => setAuditSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-edge bg-cream-50 focus:bg-white focus:outline-none focus:border-forest-600 font-semibold"
+                />
+              </div>
+
+              <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto no-scrollbar">
+                {[
+                  { id: 'all', label: `All (${totalCirculation})` },
+                  { id: 'godown', label: `In Godown (${cleanInGodown})` },
+                  { id: 'transit', label: `In Transit (${inTransit})` },
+                  { id: 'customer', label: `With Customer (${withCustomer})` }
+                ].map((chip) => (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    onClick={() => setAuditFilter(chip.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap apple-press ${
+                      auditFilter === chip.id
+                        ? 'bg-forest-700 text-white shadow-xs'
+                        : 'bg-cream-100 text-charcoal-muted hover:text-charcoal'
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Mobile Touch Cards for Box Audit */}
+            <div className="md:hidden divide-y divide-edge">
+              {filteredAuditDabbas.length === 0 ? (
+                <div className="p-8 text-center text-xs text-charcoal-muted font-semibold">
+                  No boxes match your search filter.
+                </div>
+              ) : (
+                filteredAuditDabbas.map((d) => (
+                  <div key={d.code} className="p-3.5 space-y-2.5 bg-white hover:bg-cream-50/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-forest-50 border border-forest-100 text-forest-700 flex items-center justify-center font-bold">
+                          <QrCode className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="font-mono font-black text-sm tracking-wide text-forest-900 block">
+                            {d.code}
+                          </span>
+                          <span className="text-[10px] text-charcoal-muted">
+                            {d.lastUpdate || "2026-11-04 06:00"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        d.status === 'in_godown'
+                          ? 'bg-forest-50 text-forest-700 border border-forest-100'
+                          : d.status === 'with_customer'
+                          ? 'bg-cream-200 text-charcoal border border-edge'
+                          : 'bg-warmamber-50 text-warmamber-700 border border-warmamber-200'
+                      }`}>
+                        {d.status.replace('_', ' ').toUpperCase()}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-xs text-charcoal bg-cream-50/80 p-2 rounded-xl border border-edge/60">
+                      {d.status === 'in_godown' && <Building2 className="w-3.5 h-3.5 text-forest-600 shrink-0" />}
+                      {d.status === 'with_delivery' && <Bike className="w-3.5 h-3.5 text-warmamber-600 shrink-0" />}
+                      {d.status === 'with_customer' && <User className="w-3.5 h-3.5 text-charcoal-muted shrink-0" />}
+                      <span className="truncate font-semibold">{d.holder}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => showToast(`Box ${d.code} integrity verified. Seals & thermal chamber intact.`)}
+                        className="flex-1 py-1.5 text-xs font-bold rounded-xl bg-cream-100 border border-edge text-charcoal hover:bg-forest-50 hover:text-forest-700 apple-press"
+                      >
+                        Verify Hygiene
+                      </button>
+
+                      {d.status !== 'in_godown' && onUpdateDabbaStatus && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onUpdateDabbaStatus(d.code, 'in_godown', 'Godown Sanitized Rack');
+                            showToast(`Box ${d.code} washed, sanitized & restocked to Godown Rack!`);
+                          }}
+                          className="flex-1 py-1.5 text-xs font-bold rounded-xl bg-forest-50 border border-forest-200 text-forest-800 hover:bg-forest-100 apple-press flex items-center justify-center gap-1"
+                        >
+                          <RotateCcw className="w-3 h-3 text-forest-700" />
+                          <span>Restock to Godown</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-cream-100/80 border-b border-edge text-charcoal-muted">
+                  <tr>
+                    <th className="p-4 font-bold">Box Barcode/QR</th>
+                    <th className="p-4 font-bold">Current Circulation Status</th>
+                    <th className="p-4 font-bold">Current Custody Holder</th>
+                    <th className="p-4 font-bold">Last Hygiene / Audit Timestamp</th>
+                    <th className="p-4 font-bold text-right">Audit Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-edge">
+                  {filteredAuditDabbas.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="p-8 text-center text-charcoal-muted font-semibold">
+                        No boxes match your search filter.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAuditDabbas.map((d) => (
+                      <tr key={d.code} className="hover:bg-cream-50/70 transition-colors">
+                        <td className="p-4 font-bold text-charcoal">
+                          <div className="flex items-center gap-2">
+                            <QrCode className="w-4 h-4 text-forest-700" />
+                            <span className="font-mono font-black text-sm tracking-wide text-forest-900">
+                              {d.code}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="p-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                            d.status === 'in_godown'
+                              ? 'bg-forest-50 text-forest-700 border border-forest-100'
+                              : d.status === 'with_customer'
+                              ? 'bg-cream-200 text-charcoal border border-edge'
+                              : 'bg-warmamber-50 text-warmamber-700 border border-warmamber-200'
+                          }`}>
+                            {d.status.replace('_', ' ').toUpperCase()}
+                          </span>
+                        </td>
+
+                        <td className="p-4 font-semibold text-charcoal">
+                          <div className="flex items-center gap-1.5">
+                            {d.status === 'in_godown' && <Building2 className="w-3.5 h-3.5 text-forest-600" />}
+                            {d.status === 'with_delivery' && <Bike className="w-3.5 h-3.5 text-warmamber-600" />}
+                            {d.status === 'with_customer' && <User className="w-3.5 h-3.5 text-charcoal-muted" />}
+                            <span>{d.holder}</span>
+                          </div>
+                        </td>
+
+                        <td className="p-4 text-charcoal-muted font-medium">
+                          {d.lastUpdate || "2026-11-04 06:00"}
+                        </td>
+
+                        <td className="p-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => showToast(`Box ${d.code} integrity verified. Seals & thermal chamber intact.`)}
+                              className="px-3 py-1.5 text-xs font-bold rounded-xl bg-cream-100 border border-edge text-charcoal hover:bg-forest-50 hover:text-forest-700 apple-press"
+                            >
+                              Verify Hygiene
+                            </button>
+
+                            {d.status !== 'in_godown' && onUpdateDabbaStatus && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  onUpdateDabbaStatus(d.code, 'in_godown', 'Godown Sanitized Rack');
+                                  showToast(`Box ${d.code} washed, sanitized & restocked to Godown Rack!`);
+                                }}
+                                className="px-3 py-1.5 text-xs font-bold rounded-xl bg-forest-50 border border-forest-200 text-forest-800 hover:bg-forest-100 apple-press flex items-center gap-1"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5 text-forest-700" />
+                                <span>Restock to Godown</span>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+
+          {/* Wastage and Yield summary */}
+          <div className="bg-white rounded-3xl p-6 sm:p-7 border border-edge shadow-apple-card space-y-2">
             <h4 className="text-base font-bold text-charcoal">Daily Stock Wastage & Yield Analysis</h4>
             <p className="text-xs text-charcoal-muted leading-relaxed">
-              Today's food prep yield: <strong>98.4%</strong>. Wastage recorded: <strong>0.3 kg peel/trimmings</strong> (within standard 2% tolerance).
+              Today's food prep yield: <strong className="text-forest-800 font-bold">98.4%</strong>. Wastage recorded: <strong className="text-charcoal font-bold">0.3 kg peel/trimmings</strong> (within standard 2% tolerance). All stainless steel tiffins sanitized via 85°C steam wash.
             </p>
           </div>
-        </div>,
-        document.body
+
+        </div>
       )}
 
       {/* Add Purchase Entry Modal */}
