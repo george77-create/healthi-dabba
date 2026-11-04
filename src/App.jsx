@@ -40,6 +40,10 @@ export default function App() {
 
   const [currentRole, setCurrentRole] = useState(() => {
     try {
+      const hash = typeof window !== 'undefined' ? window.location.hash.toLowerCase() : '';
+      if (hash.includes('copilot') || hash.includes('driver')) {
+        return 'delivery';
+      }
       const saved = localStorage.getItem('healthi_dabba_user');
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -767,7 +771,10 @@ export default function App() {
     setDabbas(prev => prev.filter(d => d.code !== code));
   };
 
-  if (!isAuthenticated) {
+  const isDriverPortal = currentRole === 'delivery' || 
+    (typeof window !== 'undefined' && (window.location.hash.toLowerCase().includes('copilot') || window.location.hash.toLowerCase().includes('driver')));
+
+  if (!isAuthenticated && !isDriverPortal) {
     return <LoginPage onLogin={handleLogin} />;
   }
 
@@ -775,7 +782,7 @@ export default function App() {
     <div className="min-h-screen bg-cream-100 flex flex-col text-charcoal font-apple antialiased">
       
       {/* Top Navbar (Hidden when Driver Copilot is full-screen) */}
-      {currentRole !== 'delivery' && (
+      {!isDriverPortal && currentRole !== 'delivery' && (
         <Navbar
           currentRole={currentRole}
           setCurrentRole={setCurrentRole}
@@ -785,8 +792,8 @@ export default function App() {
       )}
 
       {/* Main Responsive Canvas */}
-      <main className={`flex-1 flex justify-center w-full ${currentRole === 'delivery' ? 'p-0 pb-0' : 'p-2 sm:p-6 lg:p-8 pb-24 md:pb-8'}`}>
-        <div className={`w-full ${currentRole === 'delivery' ? 'max-w-none' : 'max-w-[1520px]'} animate-fade-in`}>
+      <main className={`flex-1 flex justify-center w-full ${(currentRole === 'delivery' || isDriverPortal) ? 'p-0 pb-0' : 'p-2 sm:p-6 lg:p-8 pb-24 md:pb-8'}`}>
+        <div className={`w-full ${(currentRole === 'delivery' || isDriverPortal) ? 'max-w-none' : 'max-w-[1520px]'} animate-fade-in`}>
           {currentRole === 'customer' && (
             <CustomerPortal
               customer={currentCustomer}
@@ -804,15 +811,15 @@ export default function App() {
               onReportIssue={() => {}}
             />
           )}
-          {currentRole === 'delivery' && (
+          {(currentRole === 'delivery' || isDriverPortal) && (
             <DriverCopilotApp
               deliveryBoys={deliveryBoys}
               customers={customers}
               dabbas={dabbas}
+              damagedLedger={damagedLedger}
               onUpdateDeliveryStatus={handleUpdateDeliveryStatus}
               onScanDabba={handleScanComplete}
               onReportIssue={handleReportDeliveryIssue}
-              onExitToAdmin={() => setCurrentRole('admin')}
             />
           )}
           {currentRole === 'kitchen' && (
@@ -893,7 +900,7 @@ export default function App() {
       />
 
       {/* Subtle Apple-style Minimal Footer */}
-      {currentRole !== 'delivery' && (
+      {!isDriverPortal && currentRole !== 'delivery' && (
         <footer className="border-t border-edge bg-white/70 backdrop-blur-md py-4 px-6 text-center text-xs text-charcoal-muted">
           <div className="max-w-[1520px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
             <span>&copy; 2026 Healthi Dabba Logistics & Nutrition. All rights reserved.</span>

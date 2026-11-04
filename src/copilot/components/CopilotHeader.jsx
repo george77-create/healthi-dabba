@@ -51,7 +51,7 @@ export default function CopilotHeader({
             </div>
           </div>
 
-          {/* Right Controls: Driver Selector & Exit Button */}
+          {/* Right Controls: Driver Selector */}
           <div className="flex items-center gap-2">
             {/* Active Driver Selector */}
             {deliveryBoys.length > 1 && (
@@ -72,19 +72,6 @@ export default function CopilotHeader({
                 </select>
                 <ChevronDown className="w-3.5 h-3.5 text-charcoal-muted absolute right-2.5 top-2.5 pointer-events-none" />
               </div>
-            )}
-
-            {/* Admin Switch Back Button */}
-            {onExitToAdmin && (
-              <button
-                type="button"
-                onClick={onExitToAdmin}
-                className="py-1.5 px-3 rounded-xl bg-white hover:bg-cream-100 border border-edge text-xs font-bold text-charcoal flex items-center gap-1.5 shadow-sm transition-all apple-press"
-                title="Return to Admin OS"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-forest-700" />
-                <span className="hidden sm:inline">Admin OS</span>
-              </button>
             )}
           </div>
         </div>

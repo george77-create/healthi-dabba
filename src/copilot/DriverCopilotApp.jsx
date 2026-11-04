@@ -20,10 +20,10 @@ export default function DriverCopilotApp({
   deliveryBoys = [],
   customers = [],
   dabbas = [],
+  damagedLedger = [],
   onUpdateDeliveryStatus,
   onScanDabba,
-  onReportIssue,
-  onExitToAdmin
+  onReportIssue
 }) {
   // 1. Active Driver State
   const [activeDriver, setActiveDriver] = useState(() => {
@@ -148,7 +148,6 @@ export default function DriverCopilotApp({
         completedStops={completedStops}
         pendingStops={pendingStops}
         issuesCount={issuesCount}
-        onExitToAdmin={onExitToAdmin}
       />
 
       {/* 2. Responsive Toolbar (Mobile Tabs & Desktop View Mode Switcher) */}
@@ -319,8 +318,9 @@ export default function DriverCopilotApp({
         isOpen={scannerModal.isOpen}
         onClose={() => setScannerModal(prev => ({ ...prev, isOpen: false }))}
         targetCustomer={scannerModal.targetCustomer}
-        expectedDabba={scannerModal.expectedDabba}
         allAvailableDabbas={dabbas}
+        damagedLedger={damagedLedger}
+        pendingCustomers={displayStops.filter(s => s.todayDeliveryStatus !== 'Delivered')}
         onScanSuccess={handleScanSuccess}
       />
 
