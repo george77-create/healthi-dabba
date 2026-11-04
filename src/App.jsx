@@ -5,6 +5,7 @@ import DeliveryPortal from './components/DeliveryPortal';
 import KitchenPortal from './components/KitchenPortal';
 import AdminPortal from './components/AdminPortal';
 import QRModal from './components/QRModal';
+import LoginPage from './components/LoginPage';
 import { 
   initialCustomers, 
   initialDeliveryBoys, 
@@ -18,8 +19,44 @@ import {
 } from './data/mockData';
 
 export default function App() {
-  const [currentRole, setCurrentRole] = useState('admin'); // Set admin as default or easily switch
-  const [activeCustomerId, setActiveCustomerId] = useState('CUST-001');
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('healthi_dabba_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    try {
+      return !!localStorage.getItem('healthi_dabba_user');
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const [currentRole, setCurrentRole] = useState(() => {
+    try {
+      const saved = localStorage.getItem('healthi_dabba_user');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.role) return parsed.role;
+      }
+    } catch (e) {}
+    return 'admin';
+  });
+
+  const [activeCustomerId, setActiveCustomerId] = useState(() => {
+    try {
+      const saved = localStorage.getItem('healthi_dabba_user');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.customerId) return parsed.customerId;
+      }
+    } catch (e) {}
+    return 'CUST-001';
+  });
   
   // Central synced state
   const [customers, setCustomers] = useState(initialCustomers);
@@ -563,6 +600,32 @@ export default function App() {
     }, ...prev]);
   };
 
+  // Auth Handlers
+  const handleLogin = (userData) => {
+    setCurrentUser(userData);
+    setIsAuthenticated(true);
+    if (userData.role) {
+      setCurrentRole(userData.role);
+    }
+    if (userData.customerId) {
+      setActiveCustomerId(userData.customerId);
+    }
+  };
+
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem('healthi_dabba_user');
+    } catch (e) {
+      console.error(e);
+    }
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+  };
+
+  if (!isAuthenticated) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
   return (
     <div className="min-h-screen bg-cream-100 flex flex-col text-charcoal font-apple antialiased">
       
@@ -570,6 +633,8 @@ export default function App() {
       <Navbar
         currentRole={currentRole}
         setCurrentRole={setCurrentRole}
+        currentUser={currentUser}
+        onLogout={handleLogout}
       />
 
       {/* Main Responsive Canvas */}
