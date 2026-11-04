@@ -40,10 +40,6 @@ export default function App() {
 
   const [currentRole, setCurrentRole] = useState(() => {
     try {
-      const hash = typeof window !== 'undefined' ? window.location.hash.toLowerCase() : '';
-      if (hash.includes('copilot') || hash.includes('driver')) {
-        return 'delivery';
-      }
       const saved = localStorage.getItem('healthi_dabba_user');
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -235,17 +231,21 @@ export default function App() {
     }));
   };
 
-  // URL Hash Listener for direct Driver Copilot access (#/copilot or #copilot)
+  // Dedicated state for separate Driver Copilot standalone mobile portal (#/copilot)
+  const [isCopilotPage, setIsCopilotPage] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const hash = window.location.hash.toLowerCase();
+    return hash === '#copilot' || hash === '#/copilot';
+  });
+
   useEffect(() => {
-    const handleHashSync = () => {
+    const handleHash = () => {
       const hash = window.location.hash.toLowerCase();
-      if (hash === '#copilot' || hash === '#/copilot' || hash === '#driver' || hash === '#driver-copilot') {
-        setCurrentRole('delivery');
-      }
+      setIsCopilotPage(hash === '#copilot' || hash === '#/copilot');
     };
-    handleHashSync();
-    window.addEventListener('hashchange', handleHashSync);
-    return () => window.removeEventListener('hashchange', handleHashSync);
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
   // Handler: Delivery Boy Updates Delivery Status
@@ -771,134 +771,131 @@ export default function App() {
     setDabbas(prev => prev.filter(d => d.code !== code));
   };
 
-  const isDriverPortal = currentRole === 'delivery' || 
-    (typeof window !== 'undefined' && (window.location.hash.toLowerCase().includes('copilot') || window.location.hash.toLowerCase().includes('driver')));
+  // 1. Separate standalone Driver Copilot web app (Only when accessing #/copilot)
+  if (isCopilotPage) {
+    return (
+      <DriverCopilotApp
+        deliveryBoys={deliveryBoys}
+        customers={customers}
+        dabbas={dabbas}
+        damagedLedger={damagedLedger}
+        onUpdateDeliveryStatus={handleUpdateDeliveryStatus}
+        onScanDabba={handleScanComplete}
+        onReportIssue={handleReportDeliveryIssue}
+      />
+    );
+  }
 
-  if (!isAuthenticated && !isDriverPortal) {
+  // 2. Main Admin Website
+  if (!isAuthenticated) {
     return <LoginPage onLogin={handleLogin} />;
   }
 
   return (
     <div className="min-h-screen bg-cream-100 flex flex-col text-charcoal font-apple antialiased">
       
-      {/* Top Navbar (Hidden when Driver Copilot is full-screen) */}
-      {!isDriverPortal && currentRole !== 'delivery' && (
-        <Navbar
-          currentRole={currentRole}
-          setCurrentRole={setCurrentRole}
-          currentUser={currentUser}
-          onLogout={handleLogout}
-        />
-      )}
+      {/* Top Navbar */}
+      <Navbar
+        currentRole={currentRole}
+        setCurrentRole={setCurrentRole}
+        currentUser={currentUser}
+        onLogout={handleLogout}
+      />
 
       {/* Main Responsive Canvas */}
-      <main className={`flex-1 flex justify-center w-full ${isDriverPortal ? 'p-0 pb-0' : 'p-2 sm:p-6 lg:p-8 pb-24 md:pb-8'}`}>
-        <div className={`w-full ${isDriverPortal ? 'max-w-none' : 'max-w-[1520px]'} animate-fade-in`}>
-          {isDriverPortal ? (
-            <DriverCopilotApp
-              deliveryBoys={deliveryBoys}
+      <main className="flex-1 p-2 sm:p-6 lg:p-8 flex justify-center w-full pb-24 md:pb-8">
+        <div className="w-full max-w-[1520px] animate-fade-in">
+          {currentRole === 'customer' && (
+            <CustomerPortal
+              customer={currentCustomer}
               customers={customers}
+              dailyMenu={dailyMenu}
+              onSelectCustomer={setActiveCustomerId}
+              onApplyLeave={handleApplyLeave}
+              onScheduleLeave={handleScheduleLeave}
+              onToggleSkipToday={handleToggleSkipToday}
+              onCancelSubscription={handleCancelSubscription}
+              onReactivateSubscription={handleReactivateSubscription}
+              onMakePayment={handleMakePayment}
+              onUpdateCustomerMeal={handleUpdateCustomerMeal}
+              onAllotDishes={handleAllotDishes}
+              onReportIssue={() => {}}
+            />
+          )}
+          {currentRole === 'delivery' && (
+            <DeliveryPortal
+              deliveryBoy={deliveryBoys[0]}
+              customers={customers}
+              onUpdateDeliveryStatus={handleUpdateDeliveryStatus}
+              onScanDabba={handleOpenScanner}
+              onHandoverToGodown={handleHandoverToGodown}
+              onSendReturnAlert={() => {}}
+              onCheckInOut={handleCheckInOut}
+              urgentInstructions={urgentInstructions}
+            />
+          )}
+          {currentRole === 'kitchen' && (
+            <KitchenPortal
+              customers={customers}
+              inventory={inventory}
+              tasks={tasks}
+              checklist={checklist}
+              deliveryBoys={deliveryBoys}
               dabbas={dabbas}
               damagedLedger={damagedLedger}
-              onUpdateDeliveryStatus={handleUpdateDeliveryStatus}
-              onScanDabba={handleScanComplete}
-              onReportIssue={handleReportDeliveryIssue}
+              onAddStock={handleAddStock}
+              onToggleChecklistItem={handleToggleChecklistItem}
+              dailyMenu={dailyMenu}
+              onAssignDabbaQR={() => {}}
+              onUpdateDabbaStatus={(code, newStatus, newHolder) => {
+                setDabbas(prev => prev.map(d => d.code === code ? { 
+                  ...d, 
+                  status: newStatus, 
+                  holder: newHolder || (newStatus === 'in_godown' ? 'Godown Sanitized Rack' : d.holder), 
+                  lastUpdate: new Date().toISOString().slice(0, 16).replace('T', ' ') 
+                } : d));
+              }}
             />
-          ) : (
-            <>
-              {currentRole === 'customer' && (
-                <CustomerPortal
-                  customer={currentCustomer}
-                  customers={customers}
-                  dailyMenu={dailyMenu}
-                  onSelectCustomer={setActiveCustomerId}
-                  onApplyLeave={handleApplyLeave}
-                  onScheduleLeave={handleScheduleLeave}
-                  onToggleSkipToday={handleToggleSkipToday}
-                  onCancelSubscription={handleCancelSubscription}
-                  onReactivateSubscription={handleReactivateSubscription}
-                  onMakePayment={handleMakePayment}
-                  onUpdateCustomerMeal={handleUpdateCustomerMeal}
-                  onAllotDishes={handleAllotDishes}
-                  onReportIssue={() => {}}
-                />
-              )}
-              {currentRole === 'delivery' && (
-                <DeliveryPortal
-                  deliveryBoy={deliveryBoys[0]}
-                  customers={customers}
-                  onUpdateDeliveryStatus={handleUpdateDeliveryStatus}
-                  onScanDabba={handleOpenScanner}
-                  onHandoverToGodown={handleHandoverToGodown}
-                  onSendReturnAlert={() => {}}
-                  onCheckInOut={handleCheckInOut}
-                  urgentInstructions={urgentInstructions}
-                />
-              )}
-              {currentRole === 'kitchen' && (
-                <KitchenPortal
-                  customers={customers}
-                  inventory={inventory}
-                  tasks={tasks}
-                  checklist={checklist}
-                  deliveryBoys={deliveryBoys}
-                  dabbas={dabbas}
-                  damagedLedger={damagedLedger}
-                  onAddStock={handleAddStock}
-                  onToggleChecklistItem={handleToggleChecklistItem}
-                  dailyMenu={dailyMenu}
-                  onAssignDabbaQR={() => {}}
-                  onUpdateDabbaStatus={(code, newStatus, newHolder) => {
-                    setDabbas(prev => prev.map(d => d.code === code ? { 
-                      ...d, 
-                      status: newStatus, 
-                      holder: newHolder || (newStatus === 'in_godown' ? 'Godown Sanitized Rack' : d.holder), 
-                      lastUpdate: new Date().toISOString().slice(0, 16).replace('T', ' ') 
-                    } : d));
-                  }}
-                />
-              )}
-              {currentRole === 'admin' && (
-                <AdminPortal
-                  customers={customers}
-                  deliveryBoys={deliveryBoys}
-                  kitchenStaff={kitchenStaff}
-                  routes={routes}
-                  dabbas={dabbas}
-                  damagedLedger={damagedLedger}
-                  dailyMenu={dailyMenu}
-                  onSelectCustomer={(customerId) => {
-                    setActiveCustomerId(customerId);
-                    setCurrentRole('customer');
-                  }}
-                  onAddCustomer={handleAddCustomer}
-                  onDeleteCustomer={handleDeleteCustomer}
-                  onAddDeliveryBoy={handleAddDeliveryBoy}
-                  onUpdateDeliveryBoy={handleUpdateDeliveryBoy}
-                  onDeleteDeliveryBoy={handleDeleteDeliveryBoy}
-                  onAddKitchenStaff={handleAddKitchenStaff}
-                  onUpdateKitchenStaff={handleUpdateKitchenStaff}
-                  onDeleteKitchenStaff={handleDeleteKitchenStaff}
-                  onCreateRoute={handleCreateRoute}
-                  onDeleteRoute={handleDeleteRoute}
-                  onAssignDriverToRoute={handleAssignDriverToRoute}
-                  onAssignCustomerToRoute={handleAssignCustomerToRoute}
-                  onUpdateCustomerMeal={handleUpdateCustomerMeal}
-                  onAllotDishes={handleAllotDishes}
-                  onToggleSkipToday={handleToggleSkipToday}
-                  onScheduleLeave={handleScheduleLeave}
-                  onCancelSubscription={handleCancelSubscription}
-                  onReactivateSubscription={handleReactivateSubscription}
-                  onAddMenuItem={handleAddMenuItem}
-                  onDeleteMenuItem={handleDeleteMenuItem}
-                  onBroadcastUrgentInstruction={handleBroadcastUrgent}
-                  onAddDabba={handleAddDabba}
-                  onBulkAddDabbas={handleBulkAddDabbas}
-                  onDecommissionDabba={handleDecommissionDabba}
-                  onDeleteDabba={handleDeleteDabba}
-                />
-              )}
-            </>
+          )}
+          {currentRole === 'admin' && (
+            <AdminPortal
+              customers={customers}
+              deliveryBoys={deliveryBoys}
+              kitchenStaff={kitchenStaff}
+              routes={routes}
+              dabbas={dabbas}
+              damagedLedger={damagedLedger}
+              dailyMenu={dailyMenu}
+              onSelectCustomer={(customerId) => {
+                setActiveCustomerId(customerId);
+                setCurrentRole('customer');
+              }}
+              onAddCustomer={handleAddCustomer}
+              onDeleteCustomer={handleDeleteCustomer}
+              onAddDeliveryBoy={handleAddDeliveryBoy}
+              onUpdateDeliveryBoy={handleUpdateDeliveryBoy}
+              onDeleteDeliveryBoy={handleDeleteDeliveryBoy}
+              onAddKitchenStaff={handleAddKitchenStaff}
+              onUpdateKitchenStaff={handleUpdateKitchenStaff}
+              onDeleteKitchenStaff={handleDeleteKitchenStaff}
+              onCreateRoute={handleCreateRoute}
+              onDeleteRoute={handleDeleteRoute}
+              onAssignDriverToRoute={handleAssignDriverToRoute}
+              onAssignCustomerToRoute={handleAssignCustomerToRoute}
+              onUpdateCustomerMeal={handleUpdateCustomerMeal}
+              onAllotDishes={handleAllotDishes}
+              onToggleSkipToday={handleToggleSkipToday}
+              onScheduleLeave={handleScheduleLeave}
+              onCancelSubscription={handleCancelSubscription}
+              onReactivateSubscription={handleReactivateSubscription}
+              onAddMenuItem={handleAddMenuItem}
+              onDeleteMenuItem={handleDeleteMenuItem}
+              onBroadcastUrgentInstruction={handleBroadcastUrgent}
+              onAddDabba={handleAddDabba}
+              onBulkAddDabbas={handleBulkAddDabbas}
+              onDecommissionDabba={handleDecommissionDabba}
+              onDeleteDabba={handleDeleteDabba}
+            />
           )}
         </div>
       </main>
@@ -915,16 +912,14 @@ export default function App() {
       />
 
       {/* Subtle Apple-style Minimal Footer */}
-      {!isDriverPortal && currentRole !== 'delivery' && (
-        <footer className="border-t border-edge bg-white/70 backdrop-blur-md py-4 px-6 text-center text-xs text-charcoal-muted">
-          <div className="max-w-[1520px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-            <span>&copy; 2026 Healthi Dabba Logistics & Nutrition. All rights reserved.</span>
-            <span className="text-[11px] text-charcoal-subtle">
-              Apple SF Pro Typography • No Neon Palette • Circular Zero-Loss Dabba Lifecycle
-            </span>
-          </div>
-        </footer>
-      )}
+      <footer className="border-t border-edge bg-white/70 backdrop-blur-md py-4 px-6 text-center text-xs text-charcoal-muted">
+        <div className="max-w-[1520px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span>&copy; 2026 Healthi Dabba Logistics & Nutrition. All rights reserved.</span>
+          <span className="text-[11px] text-charcoal-subtle">
+            Apple SF Pro Typography • No Neon Palette • Circular Zero-Loss Dabba Lifecycle
+          </span>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -93,18 +93,6 @@ export default function Navbar({
                 </div>
               )}
 
-              {/* Launch Driver Copilot (External link for riders) */}
-              <a
-                href="#/copilot"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-bold rounded-2xl border border-forest-200 bg-forest-50 text-forest-800 hover:bg-forest-100 apple-press shadow-xs flex items-center gap-1.5 transition-all"
-                title="Launch Driver Copilot in new tab"
-              >
-                <Bike className="w-3.5 h-3.5 text-forest-700" />
-                <span className="hidden lg:inline">Rider Copilot ↗</span>
-              </a>
-
               {/* Logout Button */}
               {onLogout && (
                 <button
