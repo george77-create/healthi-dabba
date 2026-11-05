@@ -7,6 +7,7 @@ import KitchenPortal from './components/KitchenPortal';
 import AdminPortal from './components/AdminPortal';
 import QRModal from './components/QRModal';
 import LoginPage from './components/LoginPage';
+import { publishLiveSyncEvent, subscribeToLiveSync, playCopilotSound } from './copilot/services/copilotSync';
 import { 
   initialCustomers, 
   initialDeliveryBoys, 
@@ -60,24 +61,88 @@ export default function App() {
     return 'CUST-001';
   });
   
-  // Central synced state
-  const [customers, setCustomers] = useState(initialCustomers);
+  // Central Synced State with Permanent LocalStorage Persistence
+  const [customers, setCustomers] = useState(() => {
+    try {
+      const saved = localStorage.getItem('healthi_dabba_customers');
+      return saved ? JSON.parse(saved) : initialCustomers;
+    } catch (e) {
+      return initialCustomers;
+    }
+  });
+
   const [deliveryBoys, setDeliveryBoys] = useState(initialDeliveryBoys);
   const [kitchenStaff, setKitchenStaff] = useState(initialKitchenStaff);
   const [routes, setRoutes] = useState(initialRoutes);
   const [dailyMenu, setDailyMenu] = useState(initialDailyMenu);
-  const [dabbas, setDabbas] = useState(initialDabbas);
-  const [damagedLedger, setDamagedLedger] = useState(initialDamagedDabbas);
+
+  const [dabbas, setDabbas] = useState(() => {
+    try {
+      const saved = localStorage.getItem('healthi_dabba_inventory');
+      return saved ? JSON.parse(saved) : initialDabbas;
+    } catch (e) {
+      return initialDabbas;
+    }
+  });
+
+  const [damagedLedger, setDamagedLedger] = useState(() => {
+    try {
+      const saved = localStorage.getItem('healthi_dabba_damaged_ledger');
+      return saved ? JSON.parse(saved) : initialDamagedDabbas;
+    } catch (e) {
+      return initialDamagedDabbas;
+    }
+  });
+
   const [inventory, setInventory] = useState(initialKitchenInventory);
   const [tasks, setTasks] = useState(initialKitchenTasks);
   const [checklist, setChecklist] = useState(dispatchChecklist);
-  const [urgentInstructions, setUrgentInstructions] = useState([
-    {
-      id: "URG-1",
-      message: "Customer Vikram Varma (CUST-003) is On Leave today. Please skip drop-off for Stop 3 and proceed to Kondapur.",
-      time: "08:15 AM"
+
+  const [urgentInstructions, setUrgentInstructions] = useState(() => {
+    try {
+      const saved = localStorage.getItem('healthi_dabba_urgent_alerts');
+      return saved ? JSON.parse(saved) : [
+        {
+          id: "URG-1",
+          message: "Customer Vikram Varma (CUST-003) is On Leave today. Please skip drop-off for Stop 3 and proceed to Kondapur.",
+          time: "08:15 AM"
+        }
+      ];
+    } catch (e) {
+      return [
+        {
+          id: "URG-1",
+          message: "Customer Vikram Varma (CUST-003) is On Leave today. Please skip drop-off for Stop 3 and proceed to Kondapur.",
+          time: "08:15 AM"
+        }
+      ];
     }
-  ]);
+  });
+
+  // Automatically persist state changes to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('healthi_dabba_customers', JSON.stringify(customers));
+    } catch (e) {}
+  }, [customers]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('healthi_dabba_inventory', JSON.stringify(dabbas));
+    } catch (e) {}
+  }, [dabbas]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('healthi_dabba_damaged_ledger', JSON.stringify(damagedLedger));
+    } catch (e) {}
+  }, [damagedLedger]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('healthi_dabba_urgent_alerts', JSON.stringify(urgentInstructions));
+    } catch (e) {}
+  }, [urgentInstructions]);
 
   // Current selected customer
   const currentCustomer = customers.find(c => c.id === activeCustomerId) || customers[0];
@@ -248,6 +313,91 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
+  // Real-time bidirectional cross-device & cross-tab sync listener
+  useEffect(() => {
+    const unsubscribe = subscribeToLiveSync((event) => {
+      if (event.type === 'DELIVERY_CONFIRMED') {
+        const { customerId, customerName, scannedCode, deliveredDate, pickupDay, deliveredDay } = event;
+        
+        // 1. Update customer in live state
+        setCustomers(prev => prev.map(c => {
+          if (c.id === customerId) {
+            return {
+              ...c,
+              todayDeliveryStatus: 'Delivered',
+              dabbasHeld: [...new Set([...(c.dabbasHeld || []), scannedCode])],
+              lastDelivery: {
+                dabbaId: scannedCode,
+                deliveredDay: deliveredDay || 'Today',
+                deliveredDate: deliveredDate || new Date().toISOString().slice(0, 10)
+              },
+              autoPickupDue: {
+                isDue: true,
+                dabbaId: scannedCode,
+                pickupDay: pickupDay || 'Tomorrow',
+                deliveredDay: deliveredDay || 'Today',
+                note: `${deliveredDay || 'Today'} Delivery ➔ ${pickupDay || 'Tomorrow'} Auto-Pickup`
+              }
+            };
+          }
+          return c;
+        }));
+
+        // 2. Update dabba in live state
+        setDabbas(prev => prev.map(d => {
+          if (d.code === scannedCode) {
+            return {
+              ...d,
+              status: 'with_customer',
+              holder: `${customerName || 'Customer'} (${customerId})`,
+              lastUpdate: `${new Date().toISOString().slice(0, 10)} ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+            };
+          }
+          return d;
+        }));
+
+        // 3. Add to urgent instructions broadcast
+        setUrgentInstructions(prev => [
+          {
+            id: `SYNC-${Date.now()}`,
+            message: `🟢 Live Sync: Box #${scannedCode} delivered to ${customerName || customerId}`,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          },
+          ...prev
+        ]);
+
+        playCopilotSound('success');
+      } else if (event.type === 'CUSTOMER_NOT_AVAILABLE') {
+        const report = event.reportData;
+        if (!report) return;
+
+        setCustomers(prev => prev.map(c => {
+          if (c.id === report.customerId) {
+            return {
+              ...c,
+              todayDeliveryStatus: 'Not Available',
+              deliveryIssue: report
+            };
+          }
+          return c;
+        }));
+
+        setUrgentInstructions(prev => [
+          {
+            id: `SYNC-${Date.now()}`,
+            message: `🚨 Driver Alert: ${report.customerName} marked "${report.reasonLabel}" at ${report.timestamp}. Notes: ${report.notes || 'None'}`,
+            time: report.timestamp
+          },
+          ...prev
+        ]);
+
+        playCopilotSound('alert');
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   // Handler: Delivery Boy Updates Delivery Status
   const handleUpdateDeliveryStatus = (customerId, status) => {
     setCustomers(prev => prev.map(c => {
@@ -313,6 +463,12 @@ export default function App() {
       },
       ...prev
     ]);
+
+    // Broadcast across devices & tabs
+    publishLiveSyncEvent({
+      type: 'CUSTOMER_NOT_AVAILABLE',
+      reportData
+    });
   };
 
   // Execute QR Scan Result
@@ -362,6 +518,17 @@ export default function App() {
         }
         return d;
       }));
+
+      // Broadcast real-time delivery confirmation across devices & tabs
+      publishLiveSyncEvent({
+        type: 'DELIVERY_CONFIRMED',
+        customerId: custId,
+        customerName: cust?.name,
+        scannedCode: scannedCode,
+        deliveredDate: now.toISOString().slice(0, 10),
+        pickupDay: nextPickupDay,
+        deliveredDay: currentDayName
+      });
     } else if (actionType === 'return') {
       setCustomers(prev => prev.map(c => {
         if (c.id === custId) {

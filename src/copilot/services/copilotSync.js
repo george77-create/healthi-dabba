@@ -140,6 +140,119 @@ export function optimizeEasiestRoute(hub, stops = []) {
   return sorted;
 }
 
+// ============================================================================
+// REAL-TIME CLOUD & LOCAL TWO-WAY SYNC ENGINE (CROSS-DEVICE & CROSS-TAB)
+// ============================================================================
+
+const SYNC_TOPIC = 'healthi_dabba_sync_george_live';
+const CLOUD_SYNC_URL = `https://ntfy.sh/${SYNC_TOPIC}`;
+
+let localChannel = null;
+try {
+  if (typeof window !== 'undefined' && window.BroadcastChannel) {
+    localChannel = new BroadcastChannel('healthi_dabba_sync_channel');
+  }
+} catch (e) {}
+
+/**
+ * Publishes a live sync event to both local browser tabs AND cross-device cloud stream.
+ */
+export async function publishLiveSyncEvent(eventPayload) {
+  const messageWithMeta = {
+    ...eventPayload,
+    senderId: typeof window !== 'undefined' ? (window.__healthi_client_id || (window.__healthi_client_id = `client_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`)) : 'server',
+    sentAt: Date.now()
+  };
+
+  // 1. Same-device instant tab-to-tab sync via BroadcastChannel
+  try {
+    if (localChannel) {
+      localChannel.postMessage(messageWithMeta);
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('healthi_sync_event', { detail: messageWithMeta }));
+    }
+  } catch (e) {
+    console.debug('Local broadcast error:', e);
+  }
+
+  // 2. Cross-device Cloud Pub/Sub via lightweight EventStream (Phone -> Laptop / Laptop -> Phone)
+  try {
+    if (typeof fetch !== 'undefined') {
+      await fetch(CLOUD_SYNC_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(messageWithMeta)
+      });
+    }
+  } catch (err) {
+    console.debug('Cloud sync publish notice:', err);
+  }
+}
+
+/**
+ * Listens for live sync events from both local tabs AND cross-device cloud stream.
+ * Triggers callback when a delivery, pickup, or not-available event happens.
+ */
+export function subscribeToLiveSync(onMessageCallback) {
+  if (typeof window === 'undefined') return () => {};
+
+  const myClientId = window.__healthi_client_id || (window.__healthi_client_id = `client_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`);
+
+  const handleMessage = (data) => {
+    if (!data) return;
+    // Prevent echo loop from same client tab
+    if (data.senderId === myClientId) return;
+    onMessageCallback(data);
+  };
+
+  // 1. Local Broadcast Channel listener
+  const channelListener = (e) => {
+    handleMessage(e.data);
+  };
+  if (localChannel) {
+    localChannel.addEventListener('message', channelListener);
+  }
+
+  // 2. In-window custom event listener
+  const domListener = (e) => {
+    handleMessage(e.detail);
+  };
+  window.addEventListener('healthi_sync_event', domListener);
+
+  // 3. Cross-device Cloud SSE Stream listener
+  let eventSource = null;
+  try {
+    if (typeof window.EventSource !== 'undefined') {
+      eventSource = new EventSource(`${CLOUD_SYNC_URL}/sse`);
+      eventSource.onmessage = (event) => {
+        try {
+          const envelope = JSON.parse(event.data);
+          if (envelope.message) {
+            const parsed = typeof envelope.message === 'string' ? JSON.parse(envelope.message) : envelope.message;
+            handleMessage(parsed);
+          }
+        } catch (e) {}
+      };
+    }
+  } catch (err) {
+    console.debug('SSE Cloud sync notice:', err);
+  }
+
+  // Cleanup unsubscriber
+  return () => {
+    if (localChannel) {
+      localChannel.removeEventListener('message', channelListener);
+    }
+    window.removeEventListener('healthi_sync_event', domListener);
+    if (eventSource) {
+      eventSource.close();
+    }
+  };
+}
+
 /**
  * Exception reasons for "Customer Not Available"
  */
